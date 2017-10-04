@@ -2,9 +2,9 @@
 
 if [ -z $1 ]
 then
-   lowerEnv="dev"
+  lowerEnv="dev"
 else
-   lowerEnv=`echo $1 | tr '[A-Z]' '[a-z]'`
+  lowerEnv=`echo $1 | tr '[A-Z]' '[a-z]'`
 fi
 upperEnv=`echo $lowerEnv | tr '[a-z]' '[A-Z]'`
 
@@ -21,26 +21,26 @@ buildJsonFile="build.json"
 
 #Update with your Signing values here
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# To Find these values if you aren't sure of them you can run the 
+# To Find these values if you aren't sure of them you can run the
 # following command on your target provisioning profile:
 #
-#   security cms -D -i "/path/to/your/TargetProfile.mobileprovision"
+#  security cms -D -i "/path/to/your/TargetProfile.mobileprovision"
 #
 # in the output look for the Name and TeamIdentifier Keys
-#   <key>Name</key>
-#   <string>NAME OF YOUR PROVISIONING PROFILE IS HERE</string>
+#  <key>Name</key>
+#  <string>NAME OF YOUR PROVISIONING PROFILE IS HERE</string>
 #
-#   <key>TeamIdentifier</key>
-#		<array>
-#			<string>DEVELOPMENT TEAM ID IS HERE</string>
-#		</array>
+#  <key>TeamIdentifier</key>
+#  <array>
+#    <string>DEVELOPMENT TEAM ID IS HERE</string>
+#  </array>
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 provisioningProfileSpecifier="<PROVISIONING_PROFILE_NAME>"
 developmentTeamId="<DEV_TEAM_ID>"
 
-##Uncomment the line below to override the default android build tools
+## Uncomment the line below to override the default android build tools
 ## version used by cordova.
-#androidBuildToolVersion=22.0.1
+# androidBuildToolVersion=22.0.1
 
 #############################################################################################################
 #Start Generic Script
@@ -75,7 +75,7 @@ cordova platform add ios
 echo "------PRE-BUILDING iOS------"
 cordova build --release --buildConfig build.json ios
 
-open "${xcodeProjectLocation}" 
+open "${xcodeProjectLocation}"
 echo "---------Waiting ${indexWaitTime} seconds to let project index---------"
 sleep $indexWaitTime
 echo "Closing Xcode"
@@ -83,24 +83,24 @@ osascript -e 'quit app "Xcode"'
 
 echo "---------Beginning xcodebuild---------"
 xcodebuild \
-	-sdk iphoneos \
-	-project "${xcodeProjectLocation}" \
-	-scheme "${appName}" \
-	-configuration Release build \
-	-archivePath "${archiveLocation}" \
-	archive \
-	DEVELOPMENT_TEAM="${devTeamId}" \
-	PROVISIONING_PROFILE_SPECIFIER="${provisioningProfileSpecifier}"
+  -sdk iphoneos \
+  -project "${xcodeProjectLocation}" \
+  -scheme "${appName}" \
+  -configuration Release build \
+  -archivePath "${archiveLocation}" \
+  archive \
+  DEVELOPMENT_TEAM="${devTeamId}" \
+  PROVISIONING_PROFILE_SPECIFIER="${provisioningProfileSpecifier}"
 
 echo "------Export Archive Props------"
 echo "Archive Loction: ${archiveLocation}"
 echo "Export PLIST File: ${exportPlistLocation}"
 echo "Export Path: ${exportedIpaRoot}"
 xcodebuild \
-	-exportArchive \
-	-archivePath "${archiveLocation}" \
-	-exportPath "${exportedIpaRoot}" \
-	-exportOptionsPlist "${exportPlistLocation}" \
+  -exportArchive \
+  -archivePath "${archiveLocation}" \
+  -exportPath "${exportedIpaRoot}" \
+  -exportOptionsPlist "${exportPlistLocation}" \
 
 echo "-------Renaming Exported IPA------"
 mv "${exportedIpaRoot}/${appName}.ipa" ${outputIpaLocation}
@@ -108,21 +108,21 @@ mv "${exportedIpaRoot}/${appName}.ipa" ${outputIpaLocation}
 #BUILDING ANDROID
 if [ "$buildAndroid" = true ]
 then
-	echo "------RE-ADDING ANDROID PLATFORM------"
-	cordova platform remove android
-	cordova platform add android
+  echo "------RE-ADDING ANDROID PLATFORM------"
+  cordova platform remove android
+  cordova platform add android
 
-	echo "------BUILDING ANDROID------"
-	if [ -z "$androidBuildToolVersion" ]
-	then
-					echo "---------No Android Build Tool Version set. Default to Cordova's Default"
-					cordova build android
-	else
-					echo "---------Android Build Tool Version set. Using ${androidBuildToolVersion}"
-					cordova build android -- --gradleArg=-PcdvBuildToolsVersion=${androidBuildToolVersion}
-	fi
+  echo "------BUILDING ANDROID------"
+  if [ -z "$androidBuildToolVersion" ]
+  then
+    echo "---------No Android Build Tool Version set. Default to Cordova's Default"
+    cordova build android
+  else
+    echo "---------Android Build Tool Version set. Using ${androidBuildToolVersion}"
+    cordova build android -- --gradleArg=-PcdvBuildToolsVersion=${androidBuildToolVersion}
+  fi
 
-	cp ./platforms/android/build/outputs/apk/android-debug.apk "${archivePath}/${packagePrefix}-v${version}.apk"
+  cp ./platforms/android/build/outputs/apk/android-debug.apk "${archivePath}/${packagePrefix}-v${version}.apk"
 fi
 
 echo "------Archives Built-------"
