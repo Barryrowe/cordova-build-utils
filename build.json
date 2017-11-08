@@ -1,16 +1,17 @@
 {
-  "ios": {
-      "debug": {
-          "codeSignIdentity": "iPhone Developer",
-          "developmentTeam": "<DEV_TEAM_ID>",
-          "packageType": "development",
-          "buildFlag": []
-      },
-      "release": {
-          "codeSignIdentity": "iPhone Distribution: <DEV_TEAM_NAME>",
-          "developmentTeam": "<DEV_TEAM_ID>",
-          "packageType": "enterprise",
-          "buildFlag": []
-      }
-  }
+    "ios": {
+        "debug": {
+            "codeSignIdentity": "iPhone Developer",
+            "developmentTeam": "~~TEAM_ID~~",          
+            "packageType": "development",
+            "buildFlag": []
+        },
+        "release": {
+            "codeSignIdentity": "iPhone Distribution",
+            "developmentTeam": "~~TEAM_ID~~",
+            "provisioningProfile": "~~PROVISIONING_PROFILE_NAME~~",
+            "packageType": "enterprise",
+            "buildFlag": []
+        }
+    }
 }

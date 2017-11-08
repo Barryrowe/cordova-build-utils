@@ -10,17 +10,22 @@ upperEnv=`echo $lowerEnv | tr '[a-z]' '[A-Z]'`
 
 now=`date +%Y-%m-%d-%H%M`
 
-#Update Application Specific Values HERE
+##########################################################################
+## Provide Application/Project Specific Configuration Values Here
+##########################################################################
+#**Flag that determines if the script attempts an android build
 buildAndroid=false
-indexWaitTime=20
+#**The absolute root output path for the .ipa/.mdx file(s)
 archivePath="${HOME}/Path/To/The/outputDirectory"
-packagePrefix="<DESIRED-OUTPUT-PREFIX>-${lowerEnv}"
-codeSignIdentity="iPhone Distribution"
-exportPlistLocation="export-ipa.plist";
-buildJsonFile="build.json"
+#**The prefix value for the output files
+packagePrefix="RENAME_ME_IN_BUILD_SCRIPT-${lowerEnv}"
+#**Uncomment the line below to override the default android build tools
+#** version used by cordova.
+#androidBuildToolVersion=22.0.1
 
-#Update with your Signing values here
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##########################################################################
+## Provide Signing Configuraiton Values Here
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # To Find these values if you aren't sure of them you can run the
 # following command on your target provisioning profile:
 #
@@ -34,32 +39,60 @@ buildJsonFile="build.json"
 #  <array>
 #    <string>DEVELOPMENT TEAM ID IS HERE</string>
 #  </array>
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##########################################################################
+#**The Name of your provisioning profile
 provisioningProfileSpecifier="<PROVISIONING_PROFILE_NAME>"
-developmentTeamId="<DEV_TEAM_ID>"
+#**The Development Team ID
+devTeamId="<DEV_TEAM_ID>"
+#**The path to the export-ipa.plist template file
+exportIpaPlisTemplateLocation="export-ipa.plist"
+#**The path to the build.json template file
+buildJsonTemplateLocation="build.json"
 
-## Uncomment the line below to override the default android build tools
-## version used by cordova.
-# androidBuildToolVersion=22.0.1
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~
+#~~Do any Custom Config or JS Build Work Here
+#~~ EXAMPLES: 
+#~~    - replacing config.xml with an ENV specific config
+#~~    - running the npm build task for the target ENV
+#~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# envConfigXmlRoot="."
+# echo "------Setting up Configuration for ${upperENV} Copying ENV Config.xml------"
+# cp ${envConfigXmlRoot}/config.xml.${lowerEnv} config.xml
 
-#############################################################################################################
-#Start Generic Script
-#DO NOT MODIFY BELOW UNLESS ABSOLUTELY NECESSARY
-#############################################################################################################
+# echo "------PRE-BUILDING Application------"
+# npm run build:${lowerEnv}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~END CUSTOM WORK SETUP
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-echo "-------Extracting Version, BundleId, and AppName from config.xml------"
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## Start Generic Script
+## 
+## DO NOT MODIFY BELOW UNLESS ABSOLUTELY NECESSARY
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 rawVersion=`cat "config.xml" | grep -e "<widget" | grep -o -e "version=\".*\" xmlns=" | grep -o -e "[0-9\.]"`
 version=`echo $rawVersion | sed -e 's/ //g'`
 bundleId=`cat config.xml | grep -e "<widget" | grep -o -E "id=\"(.*)\" ver" | sed -e 's/\" ver//g' | sed -e 's/id=\"//g'`
 appName=`cat config.xml | grep -e "<name>" | sed -e 's/<name>//g; s/<\/name>//g; s/^\s//g; s/^ *//;s/ *$//;'`
+cordovaIosVersion=`cat config.xml | grep -e "<engine name=\"ios\"" | grep -o -E "spec=\"(.*)\"" | sed -e 's/spec=\"//g; s/\"$//g;'`
+
+cat ${buildJsonTemplateLocation} | sed -e "s/~~PROVISIONING_PROFILE_NAME~~/${provisioningProfileSpecifier}/g; s/~~TEAM_ID~~/${devTeamId}/g" \
+	> build-complete.json
+cat ${exportIpaPlisTemplateLocation} | sed -e "s/~~BUNDLE_ID~~/${bundleId}/g; s/~~PROVISIONING_PROFILE_NAME~~/${provisioningProfileSpecifier}/g; s/~~TEAM_ID~~/${devTeamId}/g" \
+	> export-ipa-build.plist
 
 echo "------CONFIG------"
 echo "version: ${version}"
-echo "bundleId: ${bundleId}"
+echo "bundle id: ${bundleId}"
 echo "archivePath: ${archivePath}"
 echo "appName: ${appName}"
 echo "packagePrefix: ${packagePrefix}"
-echo "indexWaitTime: ${indexWaitTime}"
+echo "appName: ${appName}"
+echo "cordova-ios version: ${cordovaIosVersion}"
 echo "androidBuildToolVersion: ${androidBuildToolVersion}"
 
 archiveLocation="${archivePath}/${now}_${appName}.xcarchive"
@@ -67,21 +100,31 @@ exportedIpaRoot="${archivePath}/${upperEnv}"
 outputIpaLocation="${archivePath}/${upperEnv}/${packagePrefix}-v${version}.ipa"
 ipaLocation="${archivePath}/${appName}.ipa"
 xcodeProjectLocation="platforms/ios/${appName}.xcodeproj"
+exportPlistLocation="export-ipa-build.plist";
+buildJsonLocation="build-complete.json"
 
+#############################################################################################################
+## CORDOVA PREPARE SECTION
+#############################################################################################################
 echo "------RE-ADD iOS PLATFORM------"
 cordova platform remove ios
-cordova platform add ios
+if [ -z "${cordovaIosVersion}" ]
+then
+	cordova platform add ios
+else
+	cordova platform add ios@${cordovaIosVersion}
+fi
 
 echo "------PRE-BUILDING iOS------"
-cordova build --release --buildConfig build.json ios
+cordova build --release --buildConfig ${buildJsonLocation}
 
-open "${xcodeProjectLocation}"
-echo "---------Waiting ${indexWaitTime} seconds to let project index---------"
-sleep $indexWaitTime
-echo "Closing Xcode"
-osascript -e 'quit app "Xcode"'
+echo "------Clean Up Cordova Build------"
+rm ${buildJsonLocation}
 
-echo "---------Beginning xcodebuild---------"
+#############################################################################################################
+## IOS BUILD SECTION
+#############################################################################################################
+echo "------Beginning xcodebuild------"
 xcodebuild \
   -sdk iphoneos \
   -project "${xcodeProjectLocation}" \
@@ -105,7 +148,12 @@ xcodebuild \
 echo "-------Renaming Exported IPA------"
 mv "${exportedIpaRoot}/${appName}.ipa" ${outputIpaLocation}
 
-#BUILDING ANDROID
+echo "-------Cleaning Up Export Config------"
+rm ${exportPlistLocation}
+
+#############################################################################################################
+## ANDROID BUILD SECTION
+#############################################################################################################
 if [ "$buildAndroid" = true ]
 then
   echo "------RE-ADDING ANDROID PLATFORM------"

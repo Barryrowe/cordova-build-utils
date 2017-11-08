@@ -22,10 +22,14 @@
    
  3. Open build.sh and edit the top section for your application and environment, replacing any placeholder values with the values found in step #2 or your own custom values where applicable.
  
- 4. Open build.json and replace the placeholder values with appropriate values found in step #2
-    - You can also change the release configuration to use `app-store` or other package types, and add any additional build flags you might need
+ 4. Open build.json and verify the non placeholder values are correct for your desired build
+    - You can change the release configuration to use `app-store` or other package types, and add any additional build flags you might need
+    
+    > NOTE: The values like `~~TEAM_ID~~` will be replaced by the script. Leave the `~~**~~` placeholder values in place
 
- 5. Open export-ipa.plist and replace appropriate values from step #2 and makes sure the value for `<key>method</key>` matches what you have in `packageType` for the build.json.
+ 5. Open export-ipa.plist and makes sure the value for `<key>method</key>` matches what you have in `packageType` for the build.json. Also verify any other keys that don't have `~~*~~` placeholder values.
+     
+     > NOTE: The values like `~~TEAM_ID~~` will be replaced by the script. Leave the `~~**~~` placeholder values in place
 
  6. Run the script
 
@@ -34,7 +38,7 @@
 ```
 
 # Notes
-- The script will `dev` for the environment, but you can provide the env as a parameter like below, to have the output name the files appropriately. 
+- The script will use `dev` for the environment, but you can provide the env as a parameter like below, to have the output name the files appropriately. 
 
     ```
     ./build.sh prod
@@ -43,7 +47,7 @@
 
 - The appname and version are read from the config.xml. You may want to create `config.xml.dev`, `config.xml.test`, `config.xml.prod`, etc if you have multiple versions and need to swap the names/versions of the app. Then just `cp config.xml.${env} config.xml` before running the build script.
 
-    - This might be an additional automated feature in the future.
+    - This might be an additional automated feature in the future. There is an example of doing this in the custom config block of `build.sh`
 
 
 
